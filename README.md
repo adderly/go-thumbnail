@@ -7,7 +7,7 @@ This package provides method to create thumbnails from provided images.
 Use to `go` command:
 
 ```shell
-go get git.fminus.co/prplecake/go-thumbnail
+go get github.com/adderly/go-thumbnail
 ```
 
 ## Example
@@ -32,4 +32,4 @@ go test -v ./...
 
 GoDocs can be found at [godocs.io][godocs].
 
-[godocs]:https://godocs.io/git.fminus.co/prplecake/go-thumbnail
+[godocs]:https://godocs.io/github.com/adderly/go-thumbnail

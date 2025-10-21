@@ -1,4 +1,4 @@
-module git.fminus.co/prplecake/go-thumbnail
+module github.com/adderly/go-thumbnail
 
 go 1.23.0
 
