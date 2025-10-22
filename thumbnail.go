@@ -2,6 +2,7 @@
 package thumbnail
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"image"
@@ -108,6 +109,32 @@ func (gen *Generator) NewImageFromFile(path string) (*Image, error) {
 
 	return &Image{
 		Path:      path,
+		ImageData: src,
+
+		Size: ImageSize{
+			Width:  src.Bounds().Max.X,
+			Height: src.Bounds().Max.Y,
+		},
+		TargetDimension: ImageSize{
+			Width:  gen.Width,
+			Height: gen.Height,
+		},
+	}, nil
+}
+
+// NewImageFromByteArray reads in an image file from the file system and
+// populates an Image object. That new Image object is returned along
+// with any errors that occur during the operation.
+func (gen *Generator) NewImageFromByteArray(path []byte) (*Image, error) {
+	// Open a test image.
+	// This should not crash the program
+	src, err := imgconv.Decode(bytes.NewBuffer(path))
+	if err != nil {
+		log.Printf("failed to open image: %v", err)
+		return nil, err
+	}
+
+	return &Image{
 		ImageData: src,
 
 		Size: ImageSize{
