@@ -16,7 +16,7 @@ package thumbnail
 //func TestMimeType(t *testing.T) {
 //	config := Generator{
 //		DestinationPath:   "",
-//		DestinationPrefix: "thumb_",
+//		Prefix: "thumb_",
 //		Scaler:            "NearestNeighbor",
 //	}
 //	gen := NewGenerator(config)

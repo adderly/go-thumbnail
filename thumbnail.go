@@ -49,6 +49,9 @@ type ImageDimension struct {
 
 	//Name
 	Name string
+
+	//Name
+	DestinationOverride string
 }
 
 type GenerationResult struct {
@@ -82,12 +85,12 @@ var (
 // given configuration.
 func NewGenerator(c Generator, outputFormats []ImageDimension) *Generator {
 	return &Generator{
-		Width:             300,
-		Height:            300,
-		DestinationPath:   c.DestinationPath,
-		DestinationPrefix: c.DestinationPrefix,
-		PreferredFormat:   imgconv.FormatOption{Format: imgconv.JPEG},
-		OutputFormats:     outputFormats,
+		Width:           300,
+		Height:          300,
+		DestinationPath: c.DestinationPath,
+		Prefix:          c.Prefix,
+		PreferredFormat: imgconv.FormatOption{Format: imgconv.JPEG},
+		OutputFormats:   outputFormats,
 	}
 }
 
@@ -152,9 +155,9 @@ type Generator struct {
 	// DestinationPath is the destination thumbnail path.
 	DestinationPath string
 
-	// DestinationPrefix is the prefix for the destination thumbnail
+	// Prefix is the prefix for the destination thumbnail
 	// filename.
-	DestinationPrefix string
+	Prefix string
 
 	// OutputFormats the formats (dimensions), that the image will be exported to.
 	OutputFormats []ImageDimension
@@ -183,8 +186,12 @@ func (gen *Generator) GetProcessedImage(i *Image, dimension ImageDimension) (img
 	if dimension.Percentage > 0.0 {
 		// Resize the image to width = 200px preserving the aspect ratio.
 		mark = imgconv.Resize(i.ImageData, &imgconv.ResizeOption{Percent: dimension.Percentage})
-	} else if dimension.Width > 0 || dimension.Height > 0 {
+	} else if dimension.Width > 0 && dimension.Height > 0 {
 		mark = imgconv.Resize(i.ImageData, &imgconv.ResizeOption{Width: dimension.Width, Height: dimension.Height})
+	} else if dimension.Width > 0 {
+		mark = imgconv.Resize(i.ImageData, &imgconv.ResizeOption{Width: dimension.Width})
+	} else if dimension.Height > 0 {
+		mark = imgconv.Resize(i.ImageData, &imgconv.ResizeOption{Height: dimension.Height})
 	} else {
 		return nil, ErrInvalidNoTransformProvided
 	}
@@ -245,7 +252,7 @@ func (gen *Generator) Generate(i *Image) ([]GenerationResult, error) {
 		img := i
 		img.ImageData = thumbImg
 
-		save, err := gen.Save(img)
+		save, err := gen.SaveWithDimension(img, &outputFormat)
 		if err != nil {
 			result = append(result, GenerationResult{
 				Filename: i.Path,
@@ -271,16 +278,78 @@ func (gen *Generator) Save(i *Image) (result GenerationResult, err error) {
 	}()
 
 	// check image validity
-	if i == nil || i.ImageData != nil {
+	if i == nil || i.ImageData == nil {
 		return GenerationResult{}, ErrInvalidImageData
 	}
 
-	basefileName := filepath.Base(i.Path)
-	directoryPath := gen.DestinationPath + gen.DestinationPrefix
-	destpath := filepath.Join(directoryPath, basefileName)
+	//get different naming from Image or Generator
 
+	//var basefileName string
+	//var directoryPath string
+	//var destpath string
+	//
+
+	basefileName := filepath.Base(i.Path)
+	directoryPath := gen.DestinationPath
+	destpath := filepath.Join(directoryPath, gen.Prefix+basefileName)
+
+	//try_again:
 	// Write the resulting image as TIFF.
 	if err := imgconv.Save(destpath, i.ImageData, &gen.PreferredFormat); err != nil {
+		log.Printf("failed to write image: %v", err)
+		return GenerationResult{}, fmt.Errorf("failed to write image: %v", err)
+	}
+
+	return GenerationResult{
+		Filename: basefileName,
+		Path:     destpath,
+	}, nil
+}
+
+// CreateThumbnail generates a thumbnail.
+func (gen *Generator) SaveWithDimension(i *Image, imgConf *ImageDimension) (result GenerationResult, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("recovered from panic: %v", r)
+			err = fmt.Errorf("recovered from panic: %v", r)
+		}
+	}()
+
+	// check image validity
+	if i == nil || i.ImageData == nil || imgConf == nil {
+		return GenerationResult{}, ErrInvalidImageData
+	}
+
+	//get different naming from Image or Generator
+
+	var prefix string
+	var basefileName string
+	var directoryPath string
+	var destpath string
+
+	if len(imgConf.Prefix) > 0 {
+		prefix = imgConf.Prefix
+	} else {
+		prefix = gen.Prefix
+	}
+
+	if len(imgConf.Name) > 0 {
+		basefileName = filepath.Base(imgConf.Name)
+	} else {
+		basefileName = filepath.Base(i.Path)
+	}
+
+	if len(imgConf.DestinationOverride) > 0 {
+		destpath = imgConf.DestinationOverride
+	} else {
+		directoryPath = gen.DestinationPath
+	}
+
+	fileLocationPath := filepath.Join(directoryPath, prefix+basefileName)
+
+	//try_again:
+	// Write the resulting image as TIFF.
+	if err := imgconv.Save(fileLocationPath, i.ImageData, &gen.PreferredFormat); err != nil {
 		log.Printf("failed to write image: %v", err)
 		return GenerationResult{}, fmt.Errorf("failed to write image: %v", err)
 	}

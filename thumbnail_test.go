@@ -29,11 +29,6 @@ var thumbTests = []struct {
 
 // TestThumbTests tests thumbTests
 func TestThumbTests(t *testing.T) {
-	config := Generator{
-		DestinationPath:   "",
-		DestinationPrefix: "thumb_",
-		//Scaler:            "CatmullRom",
-	}
 	var testImagePath string
 	for _, tt := range thumbTests {
 		t.Run(tt.mimeType, func(t *testing.T) {
@@ -42,6 +37,12 @@ func TestThumbTests(t *testing.T) {
 				testImagePath = testJpegImagePath
 			case "image/png":
 				testImagePath = testPngImagePath
+			}
+
+			config := Generator{
+				DestinationPath: "",
+				Prefix:          "thumb_",
+				//Scaler:            "CatmullRom",
 			}
 
 			gen := NewGenerator(config, []ImageDimension{
@@ -54,7 +55,7 @@ func TestThumbTests(t *testing.T) {
 			}
 
 			teardownTestCase := setupTestCase(t)
-			dest := testDataPath + gen.DestinationPrefix + filepath.Base(i.Path)
+			dest := testDataPath + gen.Prefix + filepath.Base(i.Path)
 			defer teardownTestCase(t, dest)
 
 			thumbBytes, err := gen.GetProcessedImage(i, defaultImageOutput)
@@ -66,6 +67,97 @@ func TestThumbTests(t *testing.T) {
 			img.ImageData = thumbBytes
 
 			_, err = gen.Save(img)
+			if err != nil {
+
+				t.Error(err)
+				//result = append(result, GenerationResult{
+				//	Filename: i.Path,
+				//	Path:     i.Path,
+				//	Error:    err,
+				//})
+			}
+
+			checkFileExists(t, dest)
+			var (
+				wantWidth  = gen.Width
+				wantHeight = gen.Height
+			)
+			gotWidth, gotHeight, err := checkImageDimensions(dest)
+			if err != nil {
+				t.Error(err)
+			}
+			if wantWidth != gotWidth {
+				t.Errorf("checkImageDimensions() got %d, wants %d", gotWidth, wantWidth)
+			}
+			if wantHeight != gotHeight {
+				t.Errorf("checkImageDimensions() got %d, wants %d", gotHeight, wantHeight)
+			}
+		})
+	}
+}
+
+// TestThumbTests tests thumbTests
+func TestThumbMultipleTests(t *testing.T) {
+	var testImagePath string
+	for _, tt := range thumbTests {
+		t.Run(tt.mimeType, func(t *testing.T) {
+			switch mimeType := tt.mimeType; mimeType {
+			case "image/jpeg":
+				testImagePath = testJpegImagePath
+			case "image/png":
+				testImagePath = testPngImagePath
+			}
+
+			config := Generator{
+				DestinationPath: "",
+				Prefix:          "thumb_",
+
+				//Scaler:            "CatmullRom",
+			}
+
+			gen := NewGenerator(config, []ImageDimension{
+				//defaultImageOutput,
+				//{
+				//	Percentage: 0.5,
+				//},
+				//{
+				//	Percentage: 0.7,
+				//	Prefix:     "x1",
+				//},
+				//{
+				//	Percentage: 0.5,
+				//	Prefix:     "x2",
+				//},
+				{
+					Percentage: 80.5,
+					Prefix:     "x2_",
+					Name:       "cookie.jpg",
+				},
+				{
+					Percentage: 60.0,
+					Prefix:     "x3_",
+					Name:       "cookie.jpg",
+				},
+				{
+					Percentage: 40.0,
+					Prefix:     "x4_",
+					Name:       "cookie.jpg",
+				},
+			})
+
+			i, err := gen.NewImageFromFile(testImagePath)
+			if err != nil {
+				t.Error(err)
+			}
+
+			teardownTestCase := setupTestCase(t)
+			dest := testDataPath + gen.Prefix + filepath.Base(i.Path)
+			defer teardownTestCase(t, dest)
+
+			img := i
+			//img.ImageData = thumbBytes
+
+			_, err = gen.Generate(img)
 			if err != nil {
 
 				t.Error(err)
@@ -112,7 +204,7 @@ func TestThumbTests(t *testing.T) {
 //
 //	config := Generator{
 //		DestinationPath:   "",
-//		DestinationPrefix: "thumb_",
+//		Prefix: "thumb_",
 //		Scaler:            "CatmullRom",
 //	}
 //	gen := NewGenerator(config)
@@ -122,7 +214,7 @@ func TestThumbTests(t *testing.T) {
 //	}
 //
 //	teardownTestCase := setupTestCase(t)
-//	dest := testDataPath + gen.DestinationPrefix + filepath.Base(testImageURL)
+//	dest := testDataPath + gen.Prefix + filepath.Base(testImageURL)
 //	defer teardownTestCase(t, dest)
 //
 //	thumbBytes, err := gen.CreateThumbnail(i)
@@ -194,8 +286,8 @@ func checkImageDimensions(path string) (int, int, error) {
 
 func Example() {
 	var config = Generator{
-		DestinationPath:   "",
-		DestinationPrefix: "thumb_",
+		DestinationPath: "",
+		Prefix:          "thumb_",
 		//Scaler:            "CatmullRom",
 	}
 
@@ -254,7 +346,7 @@ func Example() {
 //
 //	config := Generator{
 //		DestinationPath:   "",
-//		DestinationPrefix: "thumb_",
+//		Prefix: "thumb_",
 //		Scaler:            "CatmullRom",
 //	}
 //	gen := NewGenerator(config)
@@ -263,7 +355,7 @@ func Example() {
 //		panic(err)
 //	}
 //
-//	dest := testDataPath + gen.DestinationPrefix + filepath.Base(testImageURL)
+//	dest := testDataPath + gen.Prefix + filepath.Base(testImageURL)
 //
 //	thumbBytes, err := gen.CreateThumbnail(i)
 //	if err != nil {

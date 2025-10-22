@@ -20,7 +20,7 @@ package thumbnail
 //func TestScalers(t *testing.T) {
 //	config := Generator{
 //		DestinationPath:   "",
-//		DestinationPrefix: "thumb_",
+//		Prefix: "thumb_",
 //	}
 //	for _, tt := range scalerTests {
 //		t.Run(tt.scaler, func(t *testing.T) {
@@ -34,7 +34,7 @@ package thumbnail
 //			}
 //
 //			teardownTestCase := setupTestCase(t)
-//			dest := testDataPath + gen.DestinationPrefix + filepath.Base(i.Path)
+//			dest := testDataPath + gen.Prefix + filepath.Base(i.Path)
 //			defer teardownTestCase(t, dest)
 //
 //			thumbBytes, err := gen.CreateThumbnail(i)
@@ -69,7 +69,7 @@ package thumbnail
 //func TestInvalidScaler(t *testing.T) {
 //	config := Generator{
 //		DestinationPath:   "",
-//		DestinationPrefix: "thumb_",
+//		Prefix: "thumb_",
 //		Scaler:            "",
 //	}
 //
