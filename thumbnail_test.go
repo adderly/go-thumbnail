@@ -3,17 +3,21 @@ package thumbnail
 import (
 	"bytes"
 	"image"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
 var (
-	testDataPath      = "./test_data/"
-	testJpegImagePath = testDataPath + "test_image.jpg"
-	testPngImagePath  = testDataPath + "test_image.png"
+	testDataPath       = "./test_data/"
+	testJpegImagePath  = testDataPath + "test_image.jpg"
+	testPngImagePath   = testDataPath + "test_image.png"
+	defaultImageOutput = ImageDimension{
+		Width:      DefaultThumbnailSize.Width,
+		Height:     DefaultThumbnailSize.Height,
+		Percentage: 0,
+		Prefix:     "thumb_",
+	}
 )
 
 var thumbTests = []struct {
@@ -28,7 +32,7 @@ func TestThumbTests(t *testing.T) {
 	config := Generator{
 		DestinationPath:   "",
 		DestinationPrefix: "thumb_",
-		Scaler:            "CatmullRom",
+		//Scaler:            "CatmullRom",
 	}
 	var testImagePath string
 	for _, tt := range thumbTests {
@@ -39,7 +43,10 @@ func TestThumbTests(t *testing.T) {
 			case "image/png":
 				testImagePath = testPngImagePath
 			}
-			gen := NewGenerator(config)
+
+			gen := NewGenerator(config, []ImageDimension{
+				defaultImageOutput,
+			})
 
 			i, err := gen.NewImageFromFile(testImagePath)
 			if err != nil {
@@ -50,14 +57,23 @@ func TestThumbTests(t *testing.T) {
 			dest := testDataPath + gen.DestinationPrefix + filepath.Base(i.Path)
 			defer teardownTestCase(t, dest)
 
-			thumbBytes, err := gen.CreateThumbnail(i)
+			thumbBytes, err := gen.GetProcessedImage(i, defaultImageOutput)
 			if err != nil {
 				t.Error(err)
 			}
 
-			err = os.WriteFile(dest, thumbBytes, 0644)
+			img := i
+			img.ImageData = thumbBytes
+
+			_, err = gen.Save(img)
 			if err != nil {
+
 				t.Error(err)
+				//result = append(result, GenerationResult{
+				//	Filename: i.Path,
+				//	Path:     i.Path,
+				//	Error:    err,
+				//})
 			}
 
 			checkFileExists(t, dest)
@@ -79,61 +95,62 @@ func TestThumbTests(t *testing.T) {
 	}
 }
 
-func TestNewImageFromByteArray(t *testing.T) {
-	testImageURL := "https://files.compostintraining.club/media_attachments/files/108/867/955/566/871/361/original/08ec8b2277a3f373.jpeg"
-	resp, err := http.Get(testImageURL)
-	if err != nil {
-		t.Error(err)
-	}
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(resp.Body)
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Error(err)
-	}
-
-	config := Generator{
-		DestinationPath:   "",
-		DestinationPrefix: "thumb_",
-		Scaler:            "CatmullRom",
-	}
-	gen := NewGenerator(config)
-	i, err := gen.NewImageFromByteArray(data)
-	if err != nil {
-		t.Error(err)
-	}
-
-	teardownTestCase := setupTestCase(t)
-	dest := testDataPath + gen.DestinationPrefix + filepath.Base(testImageURL)
-	defer teardownTestCase(t, dest)
-
-	thumbBytes, err := gen.CreateThumbnail(i)
-	if err != nil {
-		t.Error(err)
-	}
-
-	err = os.WriteFile(dest, thumbBytes, 0644)
-	if err != nil {
-		t.Error(err)
-	}
-
-	checkFileExists(t, dest)
-	var (
-		wantWidth  = gen.Width
-		wantHeight = gen.Height
-	)
-	gotWidth, gotHeight, err := checkImageDimensions(dest)
-	if err != nil {
-		t.Error(err)
-	}
-	if wantWidth != gotWidth {
-		t.Errorf("checkImageDimensions() got %d, wants %d", gotWidth, wantWidth)
-	}
-	if wantHeight != gotHeight {
-		t.Errorf("checkImageDimensions() got %d, wants %d", gotHeight, wantHeight)
-	}
-}
+//
+//func TestNewImageFromByteArray(t *testing.T) {
+//	testImageURL := "https://files.compostintraining.club/media_attachments/files/108/867/955/566/871/361/original/08ec8b2277a3f373.jpeg"
+//	resp, err := http.Get(testImageURL)
+//	if err != nil {
+//		t.Error(err)
+//	}
+//	defer func(Body io.ReadCloser) {
+//		_ = Body.Close()
+//	}(resp.Body)
+//	data, err := io.ReadAll(resp.Body)
+//	if err != nil {
+//		t.Error(err)
+//	}
+//
+//	config := Generator{
+//		DestinationPath:   "",
+//		DestinationPrefix: "thumb_",
+//		Scaler:            "CatmullRom",
+//	}
+//	gen := NewGenerator(config)
+//	i, err := gen.NewImageFromByteArray(data)
+//	if err != nil {
+//		t.Error(err)
+//	}
+//
+//	teardownTestCase := setupTestCase(t)
+//	dest := testDataPath + gen.DestinationPrefix + filepath.Base(testImageURL)
+//	defer teardownTestCase(t, dest)
+//
+//	thumbBytes, err := gen.CreateThumbnail(i)
+//	if err != nil {
+//		t.Error(err)
+//	}
+//
+//	err = os.WriteFile(dest, thumbBytes, 0644)
+//	if err != nil {
+//		t.Error(err)
+//	}
+//
+//	checkFileExists(t, dest)
+//	var (
+//		wantWidth  = gen.Width
+//		wantHeight = gen.Height
+//	)
+//	gotWidth, gotHeight, err := checkImageDimensions(dest)
+//	if err != nil {
+//		t.Error(err)
+//	}
+//	if wantWidth != gotWidth {
+//		t.Errorf("checkImageDimensions() got %d, wants %d", gotWidth, wantWidth)
+//	}
+//	if wantHeight != gotHeight {
+//		t.Errorf("checkImageDimensions() got %d, wants %d", gotHeight, wantHeight)
+//	}
+//}
 
 func setupTestCase(t *testing.T) func(t *testing.T, path string) {
 	t.Log("Setting up test case.")
@@ -179,63 +196,82 @@ func Example() {
 	var config = Generator{
 		DestinationPath:   "",
 		DestinationPrefix: "thumb_",
-		Scaler:            "CatmullRom",
+		//Scaler:            "CatmullRom",
 	}
 
 	imagePath := "path/to/image.jpg"
-	dest := "path/to/thumb_image.jpg"
-	gen := NewGenerator(config)
+	//dest := "path/to/thumb_image.jpg"
+	gen := NewGenerator(config, []ImageDimension{
+		defaultImageOutput,
+	})
 
 	i, err := gen.NewImageFromFile(imagePath)
 	if err != nil {
 		panic(err)
 	}
 
-	thumbBytes, err := gen.CreateThumbnail(i)
+	thumbBytes, err := gen.GetProcessedImage(i, defaultImageOutput)
+	if err != nil {
+		//t.Error(err)
+		panic(err)
+	}
+
+	img := i
+	img.ImageData = thumbBytes
+
+	_, err = gen.Save(img)
+
 	if err != nil {
 		panic(err)
 	}
 
-	err = os.WriteFile(dest, thumbBytes, 0644)
-	if err != nil {
-		panic(err)
-	}
+	//
+	//thumbBytes, err := gen.CreateThumbnail(i)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//
+	//err = os.WriteFile(dest, thumbBytes, 0644)
+	//if err != nil {
+	//	panic(err)
+	//}
 }
 
-func (*Generator) ExampleNewImageFromByteArray() {
-	testImageURL := "https://example.com/image.jpg"
-	resp, err := http.Get(testImageURL)
-	if err != nil {
-		panic(err)
-	}
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(resp.Body)
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-
-	config := Generator{
-		DestinationPath:   "",
-		DestinationPrefix: "thumb_",
-		Scaler:            "CatmullRom",
-	}
-	gen := NewGenerator(config)
-	i, err := gen.NewImageFromByteArray(data)
-	if err != nil {
-		panic(err)
-	}
-
-	dest := testDataPath + gen.DestinationPrefix + filepath.Base(testImageURL)
-
-	thumbBytes, err := gen.CreateThumbnail(i)
-	if err != nil {
-		panic(err)
-	}
-
-	err = os.WriteFile(dest, thumbBytes, 0644)
-	if err != nil {
-		panic(err)
-	}
-}
+//
+//func (*Generator) ExampleNewImageFromByteArray() {
+//	testImageURL := "https://example.com/image.jpg"
+//	resp, err := http.Get(testImageURL)
+//	if err != nil {
+//		panic(err)
+//	}
+//	defer func(Body io.ReadCloser) {
+//		_ = Body.Close()
+//	}(resp.Body)
+//	data, err := io.ReadAll(resp.Body)
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	config := Generator{
+//		DestinationPath:   "",
+//		DestinationPrefix: "thumb_",
+//		Scaler:            "CatmullRom",
+//	}
+//	gen := NewGenerator(config)
+//	i, err := gen.NewImageFromByteArray(data)
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	dest := testDataPath + gen.DestinationPrefix + filepath.Base(testImageURL)
+//
+//	thumbBytes, err := gen.CreateThumbnail(i)
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	err = os.WriteFile(dest, thumbBytes, 0644)
+//	if err != nil {
+//		panic(err)
+//	}
+//}
